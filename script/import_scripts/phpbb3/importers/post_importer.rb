@@ -52,18 +52,18 @@ module ImportScripts::PhpBB3
     end
 
     def map_first_post(row, mapped)
-      return if @settings.category_mapping[row[:forum_id]] == :skip
+      return if @settings.category_mappings[row[:forum_id].to_s] == 'SKIP'
 
       poll_data = add_poll(row, mapped) if @settings.import_polls
 
-      mapped[:category] = @settings.category_mapping[row[:forum_id]] ||
+      mapped[:category] = @lookup.category_id_from_imported_category_id(@settings.prefix(@settings.category_mappings[row[:forum_id].to_s])) ||
                           @lookup.category_id_from_imported_category_id(@settings.prefix(row[:forum_id]))
       mapped[:title] = CGI.unescapeHTML(row[:topic_title]).strip[0...255]
       mapped[:pinned_at] = mapped[:created_at] unless row[:topic_type] == Constants::POST_NORMAL
       mapped[:pinned_globally] = row[:topic_type] == Constants::POST_GLOBAL
       mapped[:views] = row[:topic_views]
       mapped[:post_create_action] = proc do |post|
-        if tags = @settings.tags_mapping[row[:forum_id]].presence
+        if tags = @settings.tag_mappings[row[:forum_id].to_s].presence
           DiscourseTagging.tag_topic_by_names(post.topic, staff_guardian, tags)
         end
         @permalink_importer.create_for_topic(post.topic, row[:topic_id]) # skip @settings.prefix because ID is used in permalink generation
@@ -76,7 +76,7 @@ module ImportScripts::PhpBB3
     end
 
     def map_other_post(row, mapped)
-      return if @settings.category_mapping[row[:forum_id]] == :skip
+      return if @settings.category_mappings[row[:forum_id].to_s] == 'SKIP'
 
       parent = @lookup.topic_lookup_from_imported_post_id(@settings.prefix(row[:topic_first_post_id]))
 
